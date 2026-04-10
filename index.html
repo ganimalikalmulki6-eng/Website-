@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HikaTube Pro - Premium Streaming</title>
+
+    <style>
+        :root {
+            --primary: #66fcf1;
+            --secondary: #45a29e;
+            --bg-dark: #0b0c10;
+            --card-bg: #1f2833;
+            --text-color: #ffffff;
+            --danger: #e74c3c;
+        }
+
+        /* Light Mode Variables */
+        body.light-mode {
+            --bg-dark: #f4f4f9;
+            --card-bg: #ffffff;
+            --text-color: #1f2833;
+            --secondary: #1f2833;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-dark);
+            color: var(--text-color);
+            font-family: 'Poppins', sans-serif;
+            transition: background 0.3s;
+            overflow: hidden; /* Mencegah scroll saat splash screen aktif */
+        }
+
+        /* --- SPLASH SCREEN --- */
+        #splash-screen {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle, #1f2833 0%, #0b0c10 100%);
+            z-index: 11000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.5s ease;
+        }
+
+        .splash-logo {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary);
+            letter-spacing: 5px;
+            animation: pulse 2s infinite;
+            text-shadow: 0 0 20px rgba(102, 252, 241, 0.5);
+        }
+
+        .splash-loader {
+            margin-top: 20px;
+            width: 150px;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .splash-loader-bar {
+            position: absolute;
+            width: 0%;
+            height: 100%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+            animation: progress 2.5s ease-in-out forwards;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        @keyframes progress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        /* --- LOADING SCREEN (SPINNER) --- */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: #0b0c10;
+            z-index: 10000;
+            display: none; /* Awalnya sembunyi, muncul saat pindah konten jika perlu */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #111;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- LOGIN PAGE --- */
+        #login-page {
+            display: none; 
+            height: 100vh;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1000&q=80');
+            background-size: cover;
+        }
+        .login-box {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            width: 90%;
+            max-width: 350px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: rgba(0,0,0,0.2);
+            color: var(--text-color);
+        }
+
+        /* --- MAIN CONTENT --- */
+        #app-content { display: none; }
+        
+        /* Membolehkan scroll kembali setelah splash selesai */
+        body.loaded { overflow: auto; }
+
+        header {
+            background: var(--card-bg);
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .container { padding: 20px 5%; max-width: 1300px; margin: auto; }
+
+        .video-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .main-video-container {
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #videoPlayer {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border: none;
+            display: block;
+        }
+
+        .player-controls {
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 12px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border: 1px solid var(--secondary);
+            background: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .playlist {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .video-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+            border: 2px solid transparent;
+        }
+
+        .video-card:hover { transform: translateY(-5px); border-color: var(--primary); }
+        .video-card.active { border-color: var(--primary); background: rgba(102, 252, 241, 0.1); }
+        
+        .video-card img { width: 100%; display: block; }
+        .video-info { padding: 12px; }
+        .video-title { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+        .playing-tag { color: var(--primary); font-size: 11px; font-weight: bold; display: none; }
+        .active .playing-tag { display: block; }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-primary { background: var(--secondary); color: white; }
+        .btn-primary:hover { background: var(--primary); color: #000; }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-danger { background: var(--danger); color: white; }
+
+        @media (max-width: 600px) {
+            header h2 { font-size: 16px; }
+            .player-controls button { padding: 8px 12px; font-size: 12px; }
+            .splash-logo { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="splash-screen">
+    <div class="splash-logo">HIKATUBE</div>
+    <div class="splash-loader">
+        <div class="splash-loader-bar"></div>
+    </div>
+    <p style="color: var(--secondary); margin-top: 10px; font-size: 12px; letter-spacing: 1px;">PREMIUM STREAMING</p>
+</div>
+
+<div id="loader">
+    <div class="spinner"></div>
+</div>
+
+<div id="login-page">
+    <div class="login-box">
+        <h2 style="color: var(--primary); margin-bottom: 25px;">HikaTube Access</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button class="btn-primary" onclick="handleLogin()" style="width: 100%; justify-content: center; margin-top: 15px;">LOGIN</button>
+    </div>
+</div>
+
+<div id="app-content">
+    <header>
+        <h2 style="color: var(--primary); margin: 0;">⚡ HIKATUBE</h2>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-outline" onclick="toggleTheme()" title="Ganti Tema">🌓</button>
+            <button class="btn-danger" onclick="handleLogout()">Keluar</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="video-section">
+            <div class="main-video-container" id="playerWrapper">
+                <iframe id="videoPlayer" 
+                        src="" 
+                        allow="autoplay; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen></iframe>
+                
+                <div class="player-controls">
+                    <button class="btn-primary" onclick="changeVideo(-1)">⏮ Prev</button>
+                    <button class="btn-primary" onclick="changeVideo(1)">Next ⏭</button>
+                    <button class="btn-outline" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+                </div>
+            </div>
+
+            <div>
+                <h3 id="currentVideoTitle">Memuat Judul...</h3>
+                <input type="text" class="search-bar" id="searchVideo" placeholder="Cari video di HikaTube..." onkeyup="filterPlaylist()">
+                
+                <div class="playlist" id="playlist"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const videos = [
+        {id: "RnWbNZxY5eA", title: "Cyberpunk Aesthetic Motion"},
+        {id: "dQw4w9WgXcQ", title: "Rick Astley - Never Gonna Give You Up"},
+        {id: "3JZ_D3ELwOQ", title: "Lofi Hip Hop Radio - Relax/Study"},
+        {id: "j_UyfXvX28M", title: "Deep Focus - Music for Coding"},
+        {id: "9W9l3Xkk7Xs", title: "Nature 4K - Relaxing Scenery"},
+        {id: "hTWKbfoikeg", title: "Synthwave Mix 2024"}
+    ];
+
+    let currentIndex = 0;
+
+    // Logika Splash Screen saat Window Load
+    window.onload = () => {
+        // Durasi splash screen disesuaikan dengan animasi progress bar (2.5 detik)
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            splash.style.opacity = '0';
+            splash.style.transform = 'translateY(-100%)'; // Efek slide up
+            
+            document.body.classList.add('loaded'); // Mengaktifkan scroll
+
+            setTimeout(() => {
+                splash.style.display = 'none';
+                checkAuth();
+            }, 800);
+        }, 3000); 
+    };
+
+    function checkAuth() {
+        if (localStorage.getItem("hika_logged_in") === "true") {
+            showApp();
+        } else {
+            document.getElementById('login-page').style.display = 'flex';
+        }
+    }
+
+    function handleLogin() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        if(u && p) {
+            // Animasi transisi login
+            document.getElementById('loader').style.display = 'flex';
+            setTimeout(() => {
+                localStorage.setItem("hika_logged_in", "true");
+                showApp();
+                document.getElementById('loader').style.display = 'none';
+            }, 1000);
+        } else {
+            alert("Masukkan Username & Password!");
+        }
+    }
+
+    function handleLogout() {
+        localStorage.removeItem("hika_logged_in");
+        location.reload();
+    }
+
+    function showApp() {
+        document.getElementById('login-page').style.display = 'none';
+        document.getElementById('app-content').style.display = 'block';
+        renderPlaylist(videos);
+        playVideo(0);
+    }
+
+    function renderPlaylist(videoData) {
+        const container = document.getElementById('playlist');
+        container.innerHTML = "";
+        
+        videoData.forEach((video) => {
+            const originalIndex = videos.findIndex(v => v.id === video.id);
+            const card = document.createElement('div');
+            card.className = `video-card ${originalIndex === currentIndex ? 'active' : ''}`;
+            card.innerHTML = `
+                <img src="https://img.youtube.com/vi/${video.id}/mqdefault.jpg" alt="thumbnail">
+                <div class="video-info">
+                    <div class="playing-tag">▶ NOW PLAYING</div>
+                    <div class="video-title">${video.title}</div>
+                </div>
+            `;
+            card.onclick = () => playVideo(originalIndex);
+            container.appendChild(card);
+        });
+    }
+
+    function playVideo(index) {
+        currentIndex = index;
+        const player = document.getElementById('videoPlayer');
+        const titleDisplay = document.getElementById('currentVideoTitle');
+        
+        player.src = `https://www.youtube.com/embed/${videos[index].id}?autoplay=1&modestbranding=1&rel=0`;
+        titleDisplay.innerText = videos[index].title;
+
+        const cards = document.querySelectorAll('.video-card');
+        const query = document.getElementById('searchVideo').value.toLowerCase();
+        const filtered = videos.filter(v => v.title.toLowerCase().includes(query));
+        renderPlaylist(filtered);
+    }
+
+    function changeVideo(direction) {
+        currentIndex += direction;
+        if (currentIndex < 0) currentIndex = videos.length - 1;
+        if (currentIndex >= videos.length) currentIndex = 0;
+        playVideo(currentIndex);
+    }
+
+    function toggleFullscreen() {
+        const elem = document.getElementById('playerWrapper');
+        if (!document.fullscreenElement) {
+            if (elem.requestFullscreen) elem.requestFullscreen();
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    }
+
+    function filterPlaylist() {
+        const query = document.getElementById('searchVideo').value.toLowerCase();
+        const filtered = videos.filter(v => v.title.toLowerCase().includes(query));
+        renderPlaylist(filtered);
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+    }
+</script>
+
+</body>
+</html>
